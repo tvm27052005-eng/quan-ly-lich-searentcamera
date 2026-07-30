@@ -1,0 +1,8 @@
+{
+  "name": "Quản Lý Lịch SeaRentCamera",
+  "description": "Hệ thống Quản lý Cho Thuê Máy Ảnh chuyên nghiệp: Dashboard Notion/Stripe style, Lịch thuê Google Calendar style, Quản lý Đơn/Máy/Khách, Thu Chi, Realtime Socket.IO, Export Excel \u0026 Báo cáo Analytics",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
