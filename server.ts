@@ -36,6 +36,50 @@ let fallbackNotifications = [
   }
 ];
 
+// Vietnam Timezone Helpers (GMT+7)
+function getVietnamTime(): string {
+  return new Date().toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Ho_Chi_Minh'
+  });
+}
+
+function getVietnamDateTimeStr(): string {
+  const d = new Date();
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  };
+  const parts = new Intl.DateTimeFormat('en-CA', options).formatToParts(d);
+  const year = parts.find((p) => p.type === 'year')?.value;
+  const month = parts.find((p) => p.type === 'month')?.value;
+  const day = parts.find((p) => p.type === 'day')?.value;
+  const hour = parts.find((p) => p.type === 'hour')?.value;
+  const minute = parts.find((p) => p.type === 'minute')?.value;
+  return `${year}-${month}-${day} ${hour}:${minute}`;
+}
+
+function getVietnamDateStr(): string {
+  const d = new Date();
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  };
+  const parts = new Intl.DateTimeFormat('en-CA', options).formatToParts(d);
+  const year = parts.find((p) => p.type === 'year')?.value;
+  const month = parts.find((p) => p.type === 'month')?.value;
+  const day = parts.find((p) => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+}
+
 // Helpers
 function formatCamera(row: any): Camera {
   return {
@@ -141,7 +185,7 @@ async function bootstrap() {
     io.emit(eventType, payload);
     if (notifyTitle && notifyMessage) {
       const notifId = `notif_${Date.now()}`;
-      const timestamp = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const timestamp = getVietnamTime();
       const newNotif = {
         id: notifId,
         title: notifyTitle,
@@ -433,7 +477,7 @@ async function bootstrap() {
       idCardNumber: idCardNumber || '',
       totalSpent: 0,
       rentalCount: 0,
-      createdAt: new Date().toISOString().split('T')[0]
+      createdAt: getVietnamDateStr()
     };
 
     if (pool && isDbConnected) {
@@ -563,7 +607,7 @@ async function bootstrap() {
           staffId: (req as any).user?.id || 'usr_01',
           staffName: staffName || (req as any).user?.name || 'Nguyễn Văn Anh',
           notes: notes || '',
-          createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          createdAt: getVietnamDateTimeStr()
         };
 
         await pool.query(
@@ -643,7 +687,7 @@ async function bootstrap() {
         staffId: (req as any).user?.id || 'usr_01',
         staffName: staffName || (req as any).user?.name || 'Nguyễn Văn Anh',
         notes: notes || '',
-        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        createdAt: getVietnamDateTimeStr()
       };
 
       fallbackRentals.unshift(newRental);
@@ -697,7 +741,7 @@ async function bootstrap() {
         let returnedAtVal: string | null = rental.returnedAt || null;
 
         if (status === 'RETURNED') {
-          returnedAtVal = new Date().toISOString().replace('T', ' ').substring(0, 16);
+          returnedAtVal = getVietnamDateTimeStr();
           rental.returnedAt = returnedAtVal;
           for (const item of rental.items) {
             await pool.query('UPDATE cameras SET status = "AVAILABLE" WHERE id = ?', [item.cameraId]);
@@ -718,7 +762,7 @@ async function bootstrap() {
       rental.status = status;
 
       if (status === 'RETURNED') {
-        rental.returnedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
+        rental.returnedAt = getVietnamDateTimeStr();
         rental.items.forEach((item) => {
           const cam = fallbackCameras.find((c) => c.id === item.cameraId);
           if (cam) cam.status = 'AVAILABLE';
@@ -778,7 +822,7 @@ async function bootstrap() {
           description,
           createdById: (req as any).user?.id || 'usr_01',
           createdByName: createdByName || (req as any).user?.name || 'Nguyễn Văn Anh',
-          date: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          date: getVietnamDateTimeStr()
         };
 
         await pool.query(
@@ -805,7 +849,7 @@ async function bootstrap() {
         description,
         createdById: (req as any).user?.id || 'usr_01',
         createdByName: createdByName || (req as any).user?.name || 'Nguyễn Văn Anh',
-        date: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        date: getVietnamDateTimeStr()
       };
       fallbackTransactions.unshift(newTrx);
       await broadcastUpdate('transaction:created', newTrx, 'Phiếu thu/chi mới', `${newTrx.type === 'INCOME' ? 'Thu' : 'Chi'} ${(newTrx.amount).toLocaleString('vi-VN')} đ: ${description}`);
@@ -821,7 +865,7 @@ async function bootstrap() {
         const [availCamRes]: any = await pool.query('SELECT COUNT(*) as cnt FROM cameras WHERE status = "AVAILABLE"');
         const [maintCamRes]: any = await pool.query('SELECT COUNT(*) as cnt FROM cameras WHERE status = "MAINTENANCE"');
 
-        const todayStr = '2026-07-30';
+        const todayStr = getVietnamDateStr();
         const [todayOrdersRes]: any = await pool.query('SELECT COUNT(*) as cnt FROM rentals WHERE createdAt LIKE ?', [`${todayStr}%`]);
         const [todayRevRes]: any = await pool.query('SELECT COALESCE(SUM(amount), 0) as rev FROM transactions WHERE date LIKE ? AND type = "INCOME"', [`${todayStr}%`]);
         
@@ -845,7 +889,7 @@ async function bootstrap() {
         return res.status(500).json({ message: err.message });
       }
     } else {
-      const todayStr = '2026-07-30';
+      const todayStr = getVietnamDateStr();
       const stats: DashboardStats = {
         rentedCamerasCount: fallbackCameras.filter((c) => c.status === 'RENTED').length,
         availableCamerasCount: fallbackCameras.filter((c) => c.status === 'AVAILABLE').length,
