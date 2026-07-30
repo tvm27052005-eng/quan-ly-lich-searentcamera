@@ -46,16 +46,26 @@ export default function App() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [selectedRentalForDetail, setSelectedRentalForDetail] = useState<RentalOrder | null>(null);
 
+  const getTodayStr = () => {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const y = parts.find((p) => p.type === 'year')?.value;
+    const m = parts.find((p) => p.type === 'month')?.value;
+    const d = parts.find((p) => p.type === 'day')?.value;
+    return `${y}-${m}-${d}`;
+  };
+
+  const todayStr = getTodayStr();
+
   // Compute Dashboard Stats dynamically from current states
   const stats: DashboardStats = {
     rentedCamerasCount: cameras.filter((c) => c.status === 'RENTED').length,
     availableCamerasCount: cameras.filter((c) => c.status === 'AVAILABLE').length,
     maintenanceCamerasCount: cameras.filter((c) => c.status === 'MAINTENANCE').length,
-    todayOrdersCount: rentals.filter((r) => r.createdAt.includes('2026-07-30')).length,
+    todayOrdersCount: rentals.filter((r) => r.createdAt.startsWith(todayStr)).length,
     todayRevenue: transactions
-      .filter((t) => t.type === 'INCOME' && t.date.includes('2026-07-30'))
+      .filter((t) => t.type === 'INCOME' && t.date.startsWith(todayStr))
       .reduce((sum, t) => sum + t.amount, 0),
-    upcomingReturnsCount: rentals.filter((r) => r.status === 'ACTIVE' && r.endDate === '2026-07-30').length,
+    upcomingReturnsCount: rentals.filter((r) => r.status === 'ACTIVE' && r.endDate === todayStr).length,
     overdueCount: rentals.filter((r) => r.status === 'OVERDUE').length,
     monthlyRevenue: transactions
       .filter((t) => t.type === 'INCOME')
