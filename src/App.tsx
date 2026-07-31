@@ -130,7 +130,7 @@ export default function App() {
   }, []);
 
   // Fetch initial data via REST API
-  useEffect(() => {
+  const fetchInitialData = () => {
     fetch('/api/cameras')
       .then((res) => res.json())
       .then((data) => {
@@ -158,7 +158,13 @@ export default function App() {
         if (Array.isArray(data)) setTransactions(data);
       })
       .catch(() => {});
-  }, []);
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchInitialData();
+    }
+  }, [isAuthenticated]);
 
   // Handlers for API actions
   const handleCreateOrder = async (orderData: any) => {
