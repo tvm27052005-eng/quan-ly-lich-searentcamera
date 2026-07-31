@@ -22,6 +22,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 
 // server.ts
+var import_fs = __toESM(require("fs"), 1);
 var import_express = __toESM(require("express"), 1);
 var import_http = __toESM(require("http"), 1);
 var import_path = __toESM(require("path"), 1);
@@ -669,6 +670,14 @@ async function seedInitialData() {
 // server.ts
 var JWT_SECRET = "camera_rental_secret_key_2026";
 var PORT = 3e3;
+var DATA_DIR = import_path.default.join(process.cwd(), "data");
+var STORE_FILE = import_path.default.join(DATA_DIR, "db_store.json");
+if (!import_fs.default.existsSync(DATA_DIR)) {
+  try {
+    import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (e) {
+  }
+}
 var fallbackStaff = [...INITIAL_STAFF];
 var fallbackCameras = [...INITIAL_CAMERAS];
 var fallbackCustomers = [...INITIAL_CUSTOMERS];
@@ -692,6 +701,36 @@ var fallbackNotifications = [
     read: false
   }
 ];
+function loadStoreFromDisk() {
+  if (import_fs.default.existsSync(STORE_FILE)) {
+    try {
+      const raw = import_fs.default.readFileSync(STORE_FILE, "utf-8");
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.cameras) && data.cameras.length > 0) fallbackCameras = data.cameras;
+      if (Array.isArray(data.customers) && data.customers.length > 0) fallbackCustomers = data.customers;
+      if (Array.isArray(data.rentals) && data.rentals.length > 0) fallbackRentals = data.rentals;
+      if (Array.isArray(data.transactions) && data.transactions.length > 0) fallbackTransactions = data.transactions;
+      if (Array.isArray(data.notifications) && data.notifications.length > 0) fallbackNotifications = data.notifications;
+      console.log("\u{1F4E6} Successfully loaded persistent store from disk!");
+    } catch (e) {
+      console.error("Failed to load store from disk", e);
+    }
+  }
+}
+function saveStoreToDisk() {
+  try {
+    const data = {
+      cameras: fallbackCameras,
+      customers: fallbackCustomers,
+      rentals: fallbackRentals,
+      transactions: fallbackTransactions,
+      notifications: fallbackNotifications
+    };
+    import_fs.default.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Failed to save store to disk", e);
+  }
+}
 function getVietnamDateObject() {
   const now = /* @__PURE__ */ new Date();
   return new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 6e4);
@@ -748,6 +787,7 @@ function formatTransaction(row) {
   };
 }
 async function bootstrap() {
+  loadStoreFromDisk();
   const app = (0, import_express.default)();
   const server = import_http.default.createServer(app);
   let isDbConnected = false;
@@ -829,6 +869,7 @@ async function bootstrap() {
       }
       io.emit("notification:new", newNotif);
     }
+    saveStoreToDisk();
   };
   const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers["authorization"];

@@ -1,3 +1,4 @@
+import fs from 'fs';
 import express, { Request, Response } from 'express';
 import http from 'http';
 import path from 'path';
@@ -11,7 +12,17 @@ import { INITIAL_CAMERAS, INITIAL_CUSTOMERS, INITIAL_RENTALS, INITIAL_STAFF, INI
 const JWT_SECRET = 'camera_rental_secret_key_2026';
 const PORT = 3000;
 
-// Fallback in-memory state if MySQL server is not turned on
+const DATA_DIR = path.join(process.cwd(), 'data');
+const STORE_FILE = path.join(DATA_DIR, 'db_store.json');
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (e) {}
+}
+
+// Fallback in-memory state with persistent file backup
 let fallbackStaff: User[] = [...INITIAL_STAFF];
 let fallbackCameras: Camera[] = [...INITIAL_CAMERAS];
 let fallbackCustomers: Customer[] = [...INITIAL_CUSTOMERS];
@@ -35,6 +46,40 @@ let fallbackNotifications = [
     read: false
   }
 ];
+
+// Load store from disk
+function loadStoreFromDisk() {
+  if (fs.existsSync(STORE_FILE)) {
+    try {
+      const raw = fs.readFileSync(STORE_FILE, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.cameras) && data.cameras.length > 0) fallbackCameras = data.cameras;
+      if (Array.isArray(data.customers) && data.customers.length > 0) fallbackCustomers = data.customers;
+      if (Array.isArray(data.rentals) && data.rentals.length > 0) fallbackRentals = data.rentals;
+      if (Array.isArray(data.transactions) && data.transactions.length > 0) fallbackTransactions = data.transactions;
+      if (Array.isArray(data.notifications) && data.notifications.length > 0) fallbackNotifications = data.notifications;
+      console.log('📦 Successfully loaded persistent store from disk!');
+    } catch (e) {
+      console.error('Failed to load store from disk', e);
+    }
+  }
+}
+
+// Save store to disk
+function saveStoreToDisk() {
+  try {
+    const data = {
+      cameras: fallbackCameras,
+      customers: fallbackCustomers,
+      rentals: fallbackRentals,
+      transactions: fallbackTransactions,
+      notifications: fallbackNotifications
+    };
+    fs.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save store to disk', e);
+  }
+}
 
 // Vietnam Timezone Helpers (GMT+7 Absolute Calculation)
 function getVietnamDateObject(): Date {
@@ -102,6 +147,7 @@ function formatTransaction(row: any): Transaction {
 }
 
 async function bootstrap() {
+  loadStoreFromDisk();
   const app = express();
   const server = http.createServer(app);
 
@@ -195,6 +241,7 @@ async function bootstrap() {
       }
       io.emit('notification:new', newNotif);
     }
+    saveStoreToDisk();
   };
 
   // Auth Middleware
