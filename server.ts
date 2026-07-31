@@ -36,47 +36,34 @@ let fallbackNotifications = [
   }
 ];
 
-// Vietnam Timezone Helpers (GMT+7)
+// Vietnam Timezone Helpers (GMT+7 Absolute Calculation)
+function getVietnamDateObject(): Date {
+  const now = new Date();
+  return new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000);
+}
+
 function getVietnamTime(): string {
-  return new Date().toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Ho_Chi_Minh'
-  });
+  const vnTime = getVietnamDateObject();
+  const hour = String(vnTime.getHours()).padStart(2, '0');
+  const minute = String(vnTime.getMinutes()).padStart(2, '0');
+  return `${hour}:${minute}`;
 }
 
 function getVietnamDateTimeStr(): string {
-  const d = new Date();
-  const options: Intl.DateTimeFormatOptions = {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  };
-  const parts = new Intl.DateTimeFormat('en-CA', options).formatToParts(d);
-  const year = parts.find((p) => p.type === 'year')?.value;
-  const month = parts.find((p) => p.type === 'month')?.value;
-  const day = parts.find((p) => p.type === 'day')?.value;
-  const hour = parts.find((p) => p.type === 'hour')?.value;
-  const minute = parts.find((p) => p.type === 'minute')?.value;
+  const vnTime = getVietnamDateObject();
+  const year = vnTime.getFullYear();
+  const month = String(vnTime.getMonth() + 1).padStart(2, '0');
+  const day = String(vnTime.getDate()).padStart(2, '0');
+  const hour = String(vnTime.getHours()).padStart(2, '0');
+  const minute = String(vnTime.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
 function getVietnamDateStr(): string {
-  const d = new Date();
-  const options: Intl.DateTimeFormatOptions = {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  };
-  const parts = new Intl.DateTimeFormat('en-CA', options).formatToParts(d);
-  const year = parts.find((p) => p.type === 'year')?.value;
-  const month = parts.find((p) => p.type === 'month')?.value;
-  const day = parts.find((p) => p.type === 'day')?.value;
+  const vnTime = getVietnamDateObject();
+  const year = vnTime.getFullYear();
+  const month = String(vnTime.getMonth() + 1).padStart(2, '0');
+  const day = String(vnTime.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
