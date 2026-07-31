@@ -14,18 +14,28 @@ export let pool: mysql.Pool;
 
 export async function initDatabase() {
   try {
-    // Step 1: Connect without database to ensure DB exists
-    const rootConnection = await mysql.createConnection({
-      host: DB_HOST,
-      port: DB_PORT,
-      user: DB_USER,
-      password: DB_PASSWORD
-    });
+    const sslOptions = process.env.NODE_ENV === 'production' || DB_HOST !== 'localhost'
+      ? { rejectUnauthorized: false }
+      : undefined;
 
-    await rootConnection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
-    await rootConnection.end();
+    // Try creating local database if on localhost
+    if (DB_HOST === 'localhost' || DB_HOST === '127.0.0.1') {
+      try {
+        const rootConnection = await mysql.createConnection({
+          host: DB_HOST,
+          port: DB_PORT,
+          user: DB_USER,
+          password: DB_PASSWORD
+        });
 
-    // Step 2: Create connection pool to target database
+        await rootConnection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+        await rootConnection.end();
+      } catch (e) {
+        // Ignore local root database creation error if DB already exists or restricted
+      }
+    }
+
+    // Connect Pool directly to target database with SSL support for Cloud DBs (Aiven, Railway, etc.)
     pool = mysql.createPool({
       host: DB_HOST,
       port: DB_PORT,
@@ -34,12 +44,17 @@ export async function initDatabase() {
       database: DB_NAME,
       waitForConnections: true,
       connectionLimit: 10,
-      queueLimit: 0
+      queueLimit: 0,
+      ssl: sslOptions
     });
 
-    console.log(`[MySQL] Connected to database "${DB_NAME}" at ${DB_HOST}:${DB_PORT}`);
+    // Verify connection pool works
+    const conn = await pool.getConnection();
+    conn.release();
 
-    // Step 3: Create Tables if not exist
+    console.log(`[MySQL] Successfully connected to cloud/local database "${DB_NAME}" at ${DB_HOST}:${DB_PORT}`);
+
+    // Create Tables if not exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR(50) PRIMARY KEY,
@@ -135,7 +150,7 @@ export async function initDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // Step 4: Seed initial data if tables are empty
+    // Seed initial data if tables are empty
     await seedInitialData();
 
   } catch (err: any) {
