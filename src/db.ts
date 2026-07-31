@@ -44,6 +44,8 @@ export async function initDatabase() {
       database: DB_NAME,
       waitForConnections: true,
       connectionLimit: 10,
+      connectTimeout: 30000,
+      enableKeepAlive: true,
       queueLimit: 0,
       ssl: sslOptions
     });
